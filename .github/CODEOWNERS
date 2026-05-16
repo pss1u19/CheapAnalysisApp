@@ -1,0 +1,22 @@
+# CODEOWNERS — https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Every file requires a review from @pss1u19 unless a more specific rule below applies.
+
+*                           @pss1u19
+
+# Backend (.NET)
+/backend/                   @pss1u19
+
+# Frontend (Angular)
+/frontend/                  @pss1u19
+
+# IBKR sidecar (Python)
+/ibkr-sidecar/              @pss1u19
+
+# Shared Protobuf contracts — extra care required
+/proto/                     @pss1u19
+
+# Infrastructure / CI — extra care required
+/.github/                   @pss1u19
+/docker-compose*.yml        @pss1u19
+/Makefile                   @pss1u19

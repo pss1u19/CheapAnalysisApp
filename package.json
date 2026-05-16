@@ -1,0 +1,14 @@
+{
+  "name": "cheapanalysisapp-root",
+  "private": true,
+  "description": "Root workspace — commitlint + Husky config only. App code lives in backend/ frontend/ ibkr-sidecar/.",
+  "scripts": {
+    "prepare": "husky",
+    "commitlint": "commitlint --from HEAD~1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.3.0",
+    "@commitlint/config-conventional": "^19.2.2",
+    "husky": "^9.0.11"
+  }
+}
