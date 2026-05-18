@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CheapAnalysis.Api</RootNamespace>
+    <!--
+      Packages wired in later tasks:
+        T-004 — FastEndpoints, Serilog.AspNetCore, NSwag.AspNetCore
+        T-207 — Hangfire.AspNetCore (dashboard)
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CheapAnalysis.Application\CheapAnalysis.Application.csproj" />
+    <ProjectReference Include="..\CheapAnalysis.Infrastructure\CheapAnalysis.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
