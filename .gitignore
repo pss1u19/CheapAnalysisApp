@@ -153,3 +153,11 @@ desktop.ini
 *.tmp
 *.bak
 *.orig
+
+# -----------------------------------------------------------------------------
+# Local planning artifacts — kept loose in working tree, never committed
+# -----------------------------------------------------------------------------
+/TASKS.md
+/docs/
+/dashboard.html
+/weekly-summary-*.md

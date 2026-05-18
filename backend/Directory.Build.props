@@ -1,0 +1,19 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <!-- Required for IDE0005 (unused usings) to run on build per
+         https://github.com/dotnet/roslyn/issues/41640. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- We don't ship a library — silence "missing XML comment" without
+         dropping the doc-file generation that IDE0005 needs. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>
