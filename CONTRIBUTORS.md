@@ -24,6 +24,21 @@ By submitting a pull request, patch, commit, issue attachment, or any other cont
 - Add or update tests when behavior changes.
 - Never commit secrets, tokens, credentials, or real personal financial data.
 
+## Branching
+Branch names follow a `<type>/<slug>` convention. Use lowercase kebab-case for the slug.
+
+| Type | When to use | Example |
+|------|-------------|---------|
+| `feature/<task-id>-<slug>` | New work tracked in `docs/PROJECT_TRACKER.xlsx` | `feature/t-004-fastendpoints-host` |
+| `fix/<slug>` | Bug fix | `fix/healthz-returns-500` |
+| `chore/<slug>` | Tooling, dependencies, housekeeping | `chore/bump-dotnet-sdk` |
+| `docs/<slug>` | Documentation-only changes | `docs/threat-model` |
+
+Rules:
+- Include the task ID (e.g. `t-004`) in `feature/*` branch names so the branch maps back to a row in the project tracker.
+- Do not push auto-generated worktree branches (e.g. `claude/<adjective-name-hash>`) as the canonical PR branch — rename to the convention before opening the PR.
+- One branch per logical change; rebase or squash on merge to keep history linear.
+
 ## Developer certificate statement
 By submitting a contribution, you state:
 
