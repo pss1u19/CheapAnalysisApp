@@ -1,0 +1,15 @@
+<Project>
+
+  <!--
+    Test-project carve-out. Lives in .targets (imported after the project file)
+    so $(IsTestProject) is already set when this evaluates — a conditional
+    PropertyGroup in Directory.Build.props would be too early.
+
+    Test deps (xUnit, FluentAssertions) emit obsolete/CA noise we don't want
+    gating builds during Phase 0; tighten once the deps stabilise.
+  -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

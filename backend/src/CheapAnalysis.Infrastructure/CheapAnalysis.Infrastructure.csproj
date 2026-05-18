@@ -1,17 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <!--
-      Packages wired in later tasks:
-        T-005 — EF Core + Npgsql
-        T-205 — (no extra pkg, uses System.Security.Cryptography built-in)
-        T-207 — Hangfire.AspNetCore + Hangfire.PostgreSql
-        T-404 — Grpc.Net.Client + Google.Protobuf + Grpc.Tools
-    -->
-  </PropertyGroup>
+  <!--
+    Packages wired in later tasks:
+      T-005 — EF Core + Npgsql
+      T-205 — (no extra pkg, uses System.Security.Cryptography built-in)
+      T-207 — Hangfire.AspNetCore + Hangfire.PostgreSql
+      T-404 — Grpc.Net.Client + Google.Protobuf + Grpc.Tools
+  -->
 
   <ItemGroup>
     <ProjectReference Include="..\CheapAnalysis.Application\CheapAnalysis.Application.csproj" />
