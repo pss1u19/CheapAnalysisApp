@@ -1,11 +1,32 @@
-// T-004: DI registrations for FastEndpoints, Serilog, OpenAPI added here.
+using FastEndpoints;
+using FastEndpoints.Swagger;
+
 namespace CheapAnalysis.Api.Configuration;
 
 public static class DependencyInjection
 {
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Populated in T-004
+        services.AddFastEndpoints();
+        services.SwaggerDocument(swaggerOptions =>
+        {
+            swaggerOptions.DocumentSettings = documentSettings =>
+            {
+                documentSettings.Title = "CheapAnalysis API";
+                documentSettings.Version = "v1";
+            };
+        });
+
+        services.AddProblemDetails(problemDetailsOptions =>
+        {
+            problemDetailsOptions.CustomizeProblemDetails = problemContext =>
+            {
+                problemContext.ProblemDetails.Extensions["traceId"] = problemContext.HttpContext.TraceIdentifier;
+            };
+        });
+
+        services.AddHealthChecks();
+
         return services;
     }
 }
