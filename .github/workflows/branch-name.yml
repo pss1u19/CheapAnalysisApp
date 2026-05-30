@@ -1,0 +1,67 @@
+# Enforces the branch-naming convention from CONTRIBUTORS.md > Branching.
+# Fires on PR open / reopen / edit / new pushes; fails the check if the
+# source branch name doesn't match the convention. Skips bot-managed
+# branches (dependabot, renovate).
+name: Branch name
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate branch name
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name follows CONTRIBUTORS.md
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$BRANCH" ]]; then
+            echo "::error::github.head_ref is empty; this workflow expects a pull_request event."
+            exit 1
+          fi
+
+          # Dependency-bot branches follow their own tool's convention.
+          if [[ "$BRANCH" =~ ^(dependabot|renovate)/ ]]; then
+            echo "::notice::Skipping check for automation branch: $BRANCH"
+            exit 0
+          fi
+
+          # CONTRIBUTORS.md > Branching:
+          #   feature/t-<task-id>-<slug>   e.g. feature/t-004-fastendpoints-host
+          #   fix/<slug>                   e.g. fix/healthz-returns-500
+          #   chore/<slug>                 e.g. chore/bump-dotnet-sdk
+          #   docs/<slug>                  e.g. docs/threat-model
+          # Slug = lowercase kebab-case (letters, digits, single hyphens).
+          pattern='^(feature/t-[0-9]+-[a-z0-9]+(-[a-z0-9]+)*|(fix|chore|docs)/[a-z0-9]+(-[a-z0-9]+)*)$'
+
+          if [[ ! "$BRANCH" =~ $pattern ]]; then
+            echo "::error::Branch name '$BRANCH' does not follow the CONTRIBUTORS.md convention."
+            cat <<'EOF'
+
+          Expected one of:
+            feature/t-<task-id>-<slug>   e.g. feature/t-004-fastendpoints-host
+            fix/<slug>                   e.g. fix/healthz-returns-500
+            chore/<slug>                 e.g. chore/bump-dotnet-sdk
+            docs/<slug>                  e.g. docs/threat-model
+
+          Slugs must be lowercase kebab-case (letters, digits, single hyphens).
+          To fix: rename the branch and reopen the PR.
+
+            git branch -m <new-name>
+            git push origin -u <new-name>
+            gh pr close <this-PR-number>
+            gh pr create --head <new-name>
+
+          See CONTRIBUTORS.md > Branching for full details.
+          EOF
+            exit 1
+          fi
+
+          echo "Branch name OK: $BRANCH"
