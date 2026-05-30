@@ -1,10 +1,53 @@
-// T-002: Minimal host placeholder — FastEndpoints, Serilog, OpenAPI wired in T-004.
-var builder = WebApplication.CreateBuilder(args);
+using CheapAnalysis.Api.Configuration;
+using FastEndpoints;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Serilog;
+using Serilog.Formatting.Compact;
 
-var app = builder.Build();
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console(new CompactJsonFormatter())
+    .CreateBootstrapLogger();
 
-// Placeholder — replaced by FastEndpoints middleware in T-004
-app.MapGet("/", () => "CheapAnalysisApp is running");
-app.MapGet("/testManual", () => "CheapAnalysisApp is running test manual");
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
 
-app.Run();
+    builder.Host.UseSerilog((hostContext, _, loggerConfig) => loggerConfig
+        .ReadFrom.Configuration(hostContext.Configuration)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Application", "CheapAnalysis.Api")
+        .WriteTo.Console(new CompactJsonFormatter()));
+
+    builder.Services.AddApiServices(builder.Configuration);
+
+    var application = builder.Build();
+
+    application.UseSerilogRequestLogging();
+    application.UseExceptionHandler();
+    application.UseStatusCodePages();
+
+    application.UseFastEndpoints();
+    application.UseOpenApiDocs();
+
+    application.MapHealthChecks("/healthz", new HealthCheckOptions
+    {
+        Predicate = _ => false,
+    });
+    application.MapHealthChecks("/readyz", new HealthCheckOptions
+    {
+        Predicate = registration => registration.Tags.Contains("ready"),
+    });
+
+    application.Run();
+}
+catch (Exception exception) when (exception is not HostAbortedException)
+{
+    Log.Fatal(exception, "CheapAnalysis.Api host terminated unexpectedly");
+    throw;
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
+public partial class Program;

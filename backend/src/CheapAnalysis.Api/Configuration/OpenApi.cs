@@ -1,11 +1,12 @@
-// T-004: NSwag OpenAPI configuration added here.
+using FastEndpoints.Swagger;
+
 namespace CheapAnalysis.Api.Configuration;
 
 public static class OpenApi
 {
-    public static IApplicationBuilder UseOpenApiDocs(this IApplicationBuilder app)
+    public static IApplicationBuilder UseOpenApiDocs(this WebApplication application)
     {
-        // Populated in T-004
-        return app;
+        application.UseSwaggerGen();
+        return application;
     }
 }
