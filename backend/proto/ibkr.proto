@@ -1,0 +1,39 @@
+// IbkrService — gRPC contract between the .NET backend (client) and the Python
+// ibkr-sidecar (server). The .proto is the single source of truth; both sides
+// regenerate their stubs from it via `make proto` (see repo-root Makefile).
+//
+// Scope (T-007): HealthCheck only. The account / position / trade RPCs sketched
+// in ARCHITECTURE.md §9.3 land with the IBKR integration in Phase 4 (T-401+).
+syntax = "proto3";
+
+package cheapanalysis.ibkr.v1;
+
+// Maps the generated C# types into the same namespace the T-404
+// IbkrSidecarProvider will consume.
+option csharp_namespace = "CheapAnalysis.Ibkr.V1";
+
+service IbkrService {
+  // Reports whether the sidecar can reach IB Gateway. This is deliberately
+  // distinct from the standard grpc.health.v1.Health probe the sidecar already
+  // serves (T-006): that one signals process liveness, whereas this reflects
+  // upstream IBKR connectivity so the backend can surface a "reconnect IBKR"
+  // prompt when the Gateway socket is down (ARCHITECTURE.md §9.4).
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  // Sidecar's view of IB Gateway connectivity.
+  enum ServingStatus {
+    // proto3 requires the zero value; treat it as "status not reported".
+    SERVING_STATUS_UNSPECIFIED = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+    DEGRADED = 3;
+  }
+
+  ServingStatus status = 1;
+  // Optional human-readable detail, e.g. "ib_gateway socket closed".
+  string detail = 2;
+}

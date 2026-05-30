@@ -17,6 +17,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CheapAnalysis.IntegrationTe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CheapAnalysis.E2ETests", "tests\CheapAnalysis.E2ETests\CheapAnalysis.E2ETests.csproj", "{7A8B9C0D-1E2F-3456-AB78-CD90EF123456}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CheapAnalysis.Ibkr.Contracts", "src\CheapAnalysis.Ibkr.Contracts\CheapAnalysis.Ibkr.Contracts.csproj", "{8B9C0D1E-2F3A-4567-BC89-DE01FA234567}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{7A8B9C0D-1E2F-3456-AB78-CD90EF123456}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7A8B9C0D-1E2F-3456-AB78-CD90EF123456}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7A8B9C0D-1E2F-3456-AB78-CD90EF123456}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B9C0D1E-2F3A-4567-BC89-DE01FA234567}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B9C0D1E-2F3A-4567-BC89-DE01FA234567}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B9C0D1E-2F3A-4567-BC89-DE01FA234567}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B9C0D1E-2F3A-4567-BC89-DE01FA234567}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
