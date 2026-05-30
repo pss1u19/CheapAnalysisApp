@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(gh pr create*)",
+            "command": "b=$(git branch --show-current 2>/dev/null); if [[ -z \"$b\" || \"$b\" =~ ^(feature/t-[0-9]+-[a-z0-9]+(-[a-z0-9]+)*|(fix|chore|docs)/[a-z0-9]+(-[a-z0-9]+)*)$ ]]; then exit 0; fi; printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Branch %s does not match CONTRIBUTORS.md convention. Expected: feature/t-<id>-<slug>, fix/<slug>, chore/<slug>, or docs/<slug>. Rename with: git branch -m <new-name>\"}}\\n' \"$b\"",
+            "timeout": 5,
+            "statusMessage": "Checking branch name"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(gh pr create*)",
+            "command": "b=$(git branch --show-current 2>/dev/null); t=$(echo \"$b\" | sed -nE 's|^feature/(t-[0-9]+).*|\\1|p' | tr a-z A-Z); if [[ -n \"$t\" ]]; then m=\"PR opened. Flip $t in docs/PROJECT_TRACKER.xlsx to In Progress.\"; else m=\"PR opened. Update the matching task row in docs/PROJECT_TRACKER.xlsx to In Progress.\"; fi; printf '{\"systemMessage\":\"%s\"}\\n' \"$m\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
