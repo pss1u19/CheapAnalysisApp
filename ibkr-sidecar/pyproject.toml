@@ -1,0 +1,39 @@
+[project]
+name = "ibkr-sidecar"
+version = "0.1.0"
+description = "gRPC sidecar bridging the .NET backend to Interactive Brokers via ib_insync."
+requires-python = ">=3.11,<3.13"
+license = { text = "PolyForm-Noncommercial-1.0.0" }
+authors = [{ name = "Pavel Stoyanov" }]
+dependencies = [
+    "grpcio>=1.66,<2",
+    "grpcio-health-checking>=1.66,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "grpcio-tools>=1.66,<2",
+    "pytest>=8,<9",
+    "ruff>=0.6,<1",
+]
+
+[project.scripts]
+ibkr-sidecar = "server:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["server"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
