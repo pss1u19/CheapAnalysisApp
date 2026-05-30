@@ -56,6 +56,15 @@ dotnet_diagnostic.IDE0005.severity = warning
 dotnet_diagnostic.IDE0073.severity = silent
 
 # =============================================================================
+# EF Core migrations — generated code, don't fight the tool
+# =============================================================================
+[**/Persistence/Migrations/**.cs]
+dotnet_diagnostic.IDE0005.severity = silent
+dotnet_diagnostic.IDE0161.severity = silent
+csharp_style_namespace_declarations = block_scoped:silent
+generated_code = true
+
+# =============================================================================
 # Web / config — 2-space indent
 # =============================================================================
 [*.{ts,tsx,js,jsx,json,jsonc,yml,yaml,html,css,scss,less}]

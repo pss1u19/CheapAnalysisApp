@@ -1,3 +1,5 @@
+using CheapAnalysis.Infrastructure;
+using CheapAnalysis.Infrastructure.Persistence;
 using FastEndpoints;
 using FastEndpoints.Swagger;
 
@@ -25,7 +27,10 @@ public static class DependencyInjection
             };
         });
 
-        services.AddHealthChecks();
+        services.AddInfrastructureServices(configuration);
+
+        services.AddHealthChecks()
+            .AddDbContextCheck<AppDbContext>(name: "db", tags: ["ready"]);
 
         return services;
     }
