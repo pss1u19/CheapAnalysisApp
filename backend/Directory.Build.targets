@@ -10,6 +10,8 @@
   -->
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- CA1707: xUnit convention is Method_with_underscores for readable test names. -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
   </PropertyGroup>
 
 </Project>
