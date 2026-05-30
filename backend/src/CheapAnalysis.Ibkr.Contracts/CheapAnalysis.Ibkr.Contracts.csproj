@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Generated gRPC contract for the ibkr-sidecar (T-007).
+
+    Every type in this assembly is protoc-generated from ../../proto/ibkr.proto
+    by Grpc.Tools at build time (output lands under obj/, never committed —
+    `dotnet build` here is the .NET half of `make proto`). Nothing is
+    hand-written, so this project is intentionally source-free.
+
+    T-404 (IbkrSidecarProvider) references this project and adds the transport
+    package (Grpc.Net.Client); the client stubs generated here are what it wires
+    against. See the note in CheapAnalysis.Infrastructure.csproj.
+  -->
+
+  <PropertyGroup>
+    <!-- All code is protoc-generated. Exempt it from the repo-wide
+         warnings-as-errors and doc-file rules, which target hand-written
+         source. Mirrors the test-project carve-out in Directory.Build.targets. -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.35.0" />
+    <PackageReference Include="Grpc.Core.Api" Version="2.80.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.80.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GrpcServices="Client": the backend only calls the sidecar, so we
+         generate the client stub + message types, not the server base. -->
+    <Protobuf Include="..\..\proto\ibkr.proto" ProtoRoot="..\..\proto" GrpcServices="Client" />
+  </ItemGroup>
+
+</Project>

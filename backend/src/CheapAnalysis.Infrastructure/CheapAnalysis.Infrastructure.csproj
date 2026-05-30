@@ -4,7 +4,9 @@
     Packages wired in later tasks:
       T-205 — (no extra pkg, uses System.Security.Cryptography built-in)
       T-207 — Hangfire.AspNetCore + Hangfire.PostgreSql
-      T-404 — Grpc.Net.Client + Google.Protobuf + Grpc.Tools
+      T-404 — Grpc.Net.Client (transport) + ProjectReference to
+              CheapAnalysis.Ibkr.Contracts, whose generated gRPC client stubs
+              (from proto/ibkr.proto) were added in T-007.
   -->
 
   <ItemGroup>
