@@ -3,3 +3,6 @@ coverage
 .angular
 node_modules
 package-lock.json
+
+# NSwag-generated API clients (T-010) — regenerate via `npm run generate-api`
+src/app/api
