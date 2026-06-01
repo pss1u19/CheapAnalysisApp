@@ -12,6 +12,10 @@ public static class DependencyInjection
         services.AddFastEndpoints();
         services.SwaggerDocument(swaggerOptions =>
         {
+            // Name schemas after the class (PingResponse) rather than the full
+            // namespace path (CheapAnalysisApiEndpointsPingResponse) so generated
+            // clients get readable DTO type names.
+            swaggerOptions.ShortSchemaNames = true;
             swaggerOptions.DocumentSettings = documentSettings =>
             {
                 documentSettings.Title = "CheapAnalysis API";

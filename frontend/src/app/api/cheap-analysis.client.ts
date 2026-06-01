@@ -33,7 +33,7 @@ export class DiagnosticsClient {
     /**
      * @return Success
      */
-    cheapAnalysisApiEndpointsPingEndpoint(): Observable<CheapAnalysisApiEndpointsPingResponse> {
+    pingEndpoint(): Observable<PingResponse> {
         let url_ = this.baseUrl + "/v1/ping";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -47,20 +47,20 @@ export class DiagnosticsClient {
         };
 
         return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processCheapAnalysisApiEndpointsPingEndpoint(response_);
+            return this.processPingEndpoint(response_);
         })).pipe(_observableCatch((response_: any) => {
             if (response_ instanceof HttpResponseBase) {
                 try {
-                    return this.processCheapAnalysisApiEndpointsPingEndpoint(response_ as any);
+                    return this.processPingEndpoint(response_ as any);
                 } catch (e) {
-                    return _observableThrow(e) as any as Observable<CheapAnalysisApiEndpointsPingResponse>;
+                    return _observableThrow(e) as any as Observable<PingResponse>;
                 }
             } else
-                return _observableThrow(response_) as any as Observable<CheapAnalysisApiEndpointsPingResponse>;
+                return _observableThrow(response_) as any as Observable<PingResponse>;
         }));
     }
 
-    protected processCheapAnalysisApiEndpointsPingEndpoint(response: HttpResponseBase): Observable<CheapAnalysisApiEndpointsPingResponse> {
+    protected processPingEndpoint(response: HttpResponseBase): Observable<PingResponse> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -71,7 +71,7 @@ export class DiagnosticsClient {
             return blobToText(responseBlob).pipe(_observableMergeMap((_responseText: string) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = CheapAnalysisApiEndpointsPingResponse.fromJS(resultData200);
+            result200 = PingResponse.fromJS(resultData200);
             return _observableOf(result200);
             }));
         } else if (status !== 200 && status !== 204) {
@@ -83,10 +83,10 @@ export class DiagnosticsClient {
     }
 }
 
-export class CheapAnalysisApiEndpointsPingResponse implements ICheapAnalysisApiEndpointsPingResponse {
+export class PingResponse implements IPingResponse {
     message?: string;
 
-    constructor(data?: ICheapAnalysisApiEndpointsPingResponse) {
+    constructor(data?: IPingResponse) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -101,9 +101,9 @@ export class CheapAnalysisApiEndpointsPingResponse implements ICheapAnalysisApiE
         }
     }
 
-    static fromJS(data: any): CheapAnalysisApiEndpointsPingResponse {
+    static fromJS(data: any): PingResponse {
         data = typeof data === 'object' ? data : {};
-        let result = new CheapAnalysisApiEndpointsPingResponse();
+        let result = new PingResponse();
         result.init(data);
         return result;
     }
@@ -115,7 +115,7 @@ export class CheapAnalysisApiEndpointsPingResponse implements ICheapAnalysisApiE
     }
 }
 
-export interface ICheapAnalysisApiEndpointsPingResponse {
+export interface IPingResponse {
     message?: string;
 }
 

@@ -26,7 +26,9 @@ try
     application.UseExceptionHandler();
     application.UseStatusCodePages();
 
-    application.UseFastEndpoints();
+    // ShortNames makes swagger operationIds the endpoint class name (PingEndpoint)
+    // instead of the full namespace path, so generated client methods read cleanly.
+    application.UseFastEndpoints(fastEndpoints => fastEndpoints.Endpoints.ShortNames = true);
     application.UseOpenApiDocs();
 
     application.MapHealthChecks("/healthz", new HealthCheckOptions
