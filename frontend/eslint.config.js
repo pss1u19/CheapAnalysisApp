@@ -6,7 +6,8 @@ const prettier = require('eslint-config-prettier');
 
 module.exports = tseslint.config(
   {
-    ignores: ['dist/', 'coverage/', '.angular/', 'node_modules/'],
+    // src/app/api holds NSwag-generated clients (T-010); never lint generated code.
+    ignores: ['dist/', 'coverage/', '.angular/', 'node_modules/', 'src/app/api/'],
   },
   {
     files: ['**/*.ts'],
