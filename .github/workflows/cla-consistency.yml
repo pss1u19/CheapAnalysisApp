@@ -1,0 +1,54 @@
+# Pins the CLA signing sentence as a single source of truth.
+#
+# The exact phrase a contributor comments to sign the CLA is hardcoded in several
+# places: the gate `if:` AND the `custom-pr-sign-comment` input in cla.yml, plus
+# CLA.md and CONTRIBUTORS.md. GitHub Actions can't share it via a variable inside
+# a job-level `if:`, so the copies can't be DRY'd away. If one drifts, signing
+# breaks *silently* — a contributor copies the documented sentence, the gate no
+# longer matches, and the job never runs. This check turns that silent breakage
+# into a red CI status by failing when any copy is missing or reworded.
+#
+# The SENTENCE below is the canonical reference: to change the wording, update it
+# here and everywhere this check expects it, in the same PR.
+name: CLA consistency
+
+on:
+  pull_request:
+    paths:
+      - 'CLA.md'
+      - 'CONTRIBUTORS.md'
+      - '.github/workflows/cla.yml'
+      - '.github/workflows/cla-consistency.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Signing sentence is consistent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the CLA signing sentence matches everywhere
+        run: |
+          set -euo pipefail
+          SENTENCE='I have read the CLA Document and I hereby sign the CLA'
+
+          # file -> minimum number of lines that must contain the sentence.
+          # cla.yml needs 2: the gate `if:` and the `custom-pr-sign-comment` input.
+          check() {
+            local file="$1" want="$2"
+            local got
+            got=$(grep -F -c -- "$SENTENCE" "$file" || true)
+            if [[ "$got" -lt "$want" ]]; then
+              echo "::error file=$file::Expected the CLA signing sentence on >= $want line(s), found $got. Did the wording drift?"
+              return 1
+            fi
+            echo "OK: $file has $got occurrence(s) of the signing sentence."
+          }
+
+          rc=0
+          check "CLA.md" 1 || rc=1
+          check "CONTRIBUTORS.md" 1 || rc=1
+          check ".github/workflows/cla.yml" 2 || rc=1
+          exit "$rc"

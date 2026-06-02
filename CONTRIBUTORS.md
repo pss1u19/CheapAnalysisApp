@@ -17,6 +17,15 @@ By submitting a pull request, patch, commit, issue attachment, or any other cont
 - You keep the copyright to your own contribution.
 - You grant the maintainer a perpetual, worldwide, non-exclusive, irrevocable license to use, modify, distribute, sublicense, and relicense your contribution as part of this project and future versions of it.
 
+## Contributor License Agreement (CLA)
+The terms above are summarized in plain language; the binding version is the **[Contributor License Agreement](CLA.md)**, which every contributor must sign once. In case of any conflict, `CLA.md` governs.
+
+Signing is automated on each pull request:
+1. Open your PR as normal.
+2. If you have not signed yet, the CLA Assistant bot comments on the PR.
+3. Sign by posting a PR comment with exactly: `I have read the CLA Document and I hereby sign the CLA`
+4. You only sign once; later PRs are recognized automatically. The maintainer is exempt.
+
 ## Practical rules
 - Open an issue before large changes.
 - Keep pull requests focused and small.
