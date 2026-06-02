@@ -1,0 +1,97 @@
+# Local development stack (T-011): postgres, redis, backend, frontend, ibkr-sidecar.
+# The IBKR Gateway and the `brokerage` profile from ARCHITECTURE.md §20 are NOT
+# included yet — the sidecar (T-006) runs standalone with a hardcoded health
+# response, so it needs no gateway. Values come from a gitleaks-ignored root .env
+# (see .env.example); every variable has a sane dev default so `docker compose
+# config`/`up` works with no .env present.
+name: cheapanalysis
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-cheapanalysis}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cheapanalysis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8080
+      # Env config overrides appsettings; double-underscore maps to the
+      # ConnectionStrings:AppDb section. Host=postgres is the service name.
+      ConnectionStrings__AppDb: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cheapanalysis};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - "4200:4200"
+    # Bind-mount source for live `ng serve`; the anonymous node_modules volume
+    # preserves the image's Linux-built dependencies over the host mount.
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      backend:
+        condition: service_started
+
+  ibkr-sidecar:
+    build:
+      context: ./ibkr-sidecar
+    restart: unless-stopped
+    environment:
+      IBKR_SIDECAR_PORT: "50051"
+      IBKR_SIDECAR_LOG_LEVEL: ${IBKR_SIDECAR_LOG_LEVEL:-INFO}
+    ports:
+      - "50051:50051"
+    healthcheck:
+      # No grpc_health_probe in the image; a plain TCP connect confirms the
+      # gRPC listener is up.
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 50051), 2).close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  pgdata:
+  redisdata:

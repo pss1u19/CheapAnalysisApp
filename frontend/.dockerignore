@@ -1,0 +1,5 @@
+# node_modules is reinstalled inside the image; dist/coverage are build outputs.
+node_modules/
+dist/
+coverage/
+.angular/

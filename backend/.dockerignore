@@ -1,0 +1,7 @@
+# Keep Windows-host build artifacts out of the Linux build context so the image
+# is built clean from source.
+**/bin/
+**/obj/
+**/.vs/
+**/TestResults/
+**/*.user
