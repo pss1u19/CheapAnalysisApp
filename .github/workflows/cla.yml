@@ -32,11 +32,15 @@ jobs:
   cla:
     name: Check CLA signature
     runs-on: ubuntu-latest
-    # Only run on the signing comment or on real PR events — ignore unrelated
-    # issue comments so the job doesn't fire on every issue thread.
+    # Run on real PR events, or on any comment that *contains* the signing
+    # sentence. `contains` (not `==`) is deliberate: a stray space, period, or
+    # quote would make an exact gate skip the job entirely, leaving the signer
+    # with no feedback. We let the job run and have the action below do the
+    # authoritative exact match, so a near-miss gets a "not quite" reply instead
+    # of silence. Unrelated issue comments still don't match, so the job stays quiet.
     if: >-
       (github.event_name == 'issue_comment' &&
-       github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA')
+       contains(github.event.comment.body, 'I have read the CLA Document and I hereby sign the CLA'))
       || github.event_name == 'pull_request_target'
     steps:
       - name: CLA Assistant
