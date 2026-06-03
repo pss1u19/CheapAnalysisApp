@@ -1,23 +1,11 @@
 # CheapAnalysisApp
 
-Bulgaria-first personal finance and portfolio analysis.
-A production-style learning project built around bank sync, IBKR portfolio data, and AI summaries.
+Bulgaria-first personal finance and portfolio dashboard. PSD2 bank sync, IBKR portfolio data, AI summaries.
 
-![Status](https://img.shields.io/badge/status-draft-8b5cf6?style=flat-square)
 ![Backend](https://img.shields.io/badge/backend-.NET%2010-512BD4?style=flat-square&logo=dotnet)
 ![Frontend](https://img.shields.io/badge/frontend-Angular-DD0031?style=flat-square&logo=angular&logoColor=white)
 ![Database](https://img.shields.io/badge/database-PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange?style=flat-square)
-
-## What it is
-
-CheapAnalysisApp combines:
-
-- Bulgarian bank transactions via PSD2
-- Interactive Brokers portfolio data
-- AI-generated monthly and portfolio summaries
-
-The goal is a clean multi-user dashboard for transactions, categorization, analytics, and portfolio tracking.
 
 ## Stack
 
@@ -31,61 +19,21 @@ AI            Anthropic Claude
 Infra         Docker Compose + GitHub Actions
 ```
 
-## Why this project exists
-
-This repo is both:
-
-- a real finance dashboard for personal use and a few friends
-- a practical architecture playground for modern .NET, Angular, provider abstractions, background jobs, and polyglot services
-
-## Planned features
-
-- Bulgarian bank account sync
-- IBKR positions and trades
-- transaction categorization with rules + LLM fallback
-- spending and cashflow analytics
-- portfolio metrics and summaries
-- strict tenant isolation
-
 ## Repo layout
 
 ```text
-backend/         ASP.NET Core API (present)
+backend/         ASP.NET Core API
 frontend/        Angular app (planned)
 ibkr-sidecar/    Python gRPC service for IBKR (planned)
 proto/           Shared protobuf contracts (planned)
-docs/            Plans and architecture notes (local, untracked)
 ```
 
-## Local development
+## Contributing
 
-Phase 0 — only the backend solution exists. From `backend/`:
-
-```bash
-dotnet restore
-dotnet build
-dotnet test
-dotnet run --project src/CheapAnalysis.Api
-```
-
-Planned once the full stack lands:
-
-```bash
-make setup
-make up
-make migrate
-make proto
-```
-
-Commits follow Conventional Commits (enforced via commitlint + Husky). See `CONTRIBUTORS.md` for branch naming.
-
-## Status
-
-Early-stage and still being shaped.
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for local development, branch naming, and the CLA.
 
 ## License
 
-Source-available under **PolyForm Noncommercial 1.0.0**.
-Commercial use is not allowed without separate permission.
+Source-available under **PolyForm Noncommercial 1.0.0**. Commercial use requires a separate license — contact the maintainer.
 
-See `LICENSE` and `CONTRIBUTORS.md`.
+See [LICENSE](LICENSE) and [CONTRIBUTORS.md](CONTRIBUTORS.md).
