@@ -26,6 +26,18 @@ Signing is automated on each pull request:
 3. Sign by posting a PR comment with exactly: `I have read the CLA Document and I hereby sign the CLA`
 4. You only sign once; later PRs are recognized automatically. The maintainer is exempt.
 
+## Local development
+Phase 0 — only the backend solution exists. From `backend/`:
+
+```bash
+dotnet restore
+dotnet build
+dotnet test
+dotnet run --project src/CheapAnalysis.Api
+```
+
+Commits follow Conventional Commits, enforced via commitlint + Husky.
+
 ## Practical rules
 - Open an issue before large changes.
 - Keep pull requests focused and small.
