@@ -1,0 +1,89 @@
+# Lint + build gate for backend (.NET) and frontend (Angular).
+#
+# Two independent jobs run in parallel so a frontend failure doesn't mask a
+# backend one (and vice versa). Each job lints first, then builds:
+#   - backend  : `dotnet format --verify-no-changes` (formatting + error-level
+#                style) then a Release build. The build is where analyzers are
+#                enforced as errors — Directory.Build.props sets
+#                TreatWarningsAsErrors=true, so any analyzer/IDE warning on the
+#                app projects fails the compile. The format step is capped at
+#                `--severity error` on purpose: warning-level diagnostics (e.g.
+#                IDE0005 unused-using) are owned by the build's
+#                TreatWarningsAsErrors on the app projects and are deliberately
+#                relaxed on the test scaffolds (Directory.Build.targets), so the
+#                format gate should not fight that and strip scaffolding usings.
+#   - frontend : `ng lint` + `prettier --check` then `ng build`.
+#
+# Tests are intentionally NOT run here — the dotnet-test (Testcontainers) and
+# e2e suites land in their own workflows (T-014). This gate stays fast.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same ref supersedes in-flight runs; don't burn minutes on
+# stale commits. `github.head_ref` is the PR branch on pull_request events and
+# empty on push, where `github.run_id` keeps each push's group unique.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — format + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pin the SDK to backend/global.json (10.0.300) so CI matches local builds.
+      # The path is resolved from the workspace root, not the job working-directory.
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+
+      - name: Restore
+        run: dotnet restore CheapAnalysis.sln
+
+      - name: Format check (dotnet format --verify-no-changes)
+        run: dotnet format CheapAnalysis.sln --verify-no-changes --no-restore --severity error
+
+      - name: Build (analyzers as errors)
+        run: dotnet build CheapAnalysis.sln --configuration Release --no-restore
+
+  frontend:
+    name: Frontend — lint + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          # No `cache: npm`: package-lock.json is gitignored in this repo, and
+          # setup-node's npm cache (and `npm ci`) both require a committed lock
+          # file. Install with `npm install` until a lock file is tracked.
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint (ng lint)
+        run: npm run lint
+
+      - name: Format check (prettier --check)
+        run: npm run format:check
+
+      - name: Build
+        run: npm run build
