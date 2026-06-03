@@ -14,8 +14,9 @@
 #                format gate should not fight that and strip scaffolding usings.
 #   - frontend : `ng lint` + `prettier --check` then `ng build`.
 #
-# Tests are intentionally NOT run here — the dotnet-test (Testcontainers) and
-# e2e suites land in their own workflows (T-014). This gate stays fast.
+# Tests are intentionally NOT run here — they live in tests.yml (dotnet test,
+# pytest sidecar, jest frontend) which runs in parallel on the same triggers.
+# This gate stays fast and fails on style/build problems before tests start.
 name: CI
 
 on:
