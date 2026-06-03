@@ -1,0 +1,98 @@
+# Test suites for backend (.NET), sidecar (Python), and frontend (Angular).
+#
+# Three independent jobs run in parallel so a failure in one suite doesn't mask
+# failures in the others. This workflow is the test counterpart to ci.yml, which
+# owns lint + build. They run on the same triggers so a PR sees both gates.
+#
+# Notes per suite:
+#   - backend  : `dotnet test` on the full solution. The UnitTests and E2ETests
+#                projects are empty scaffolds today and emit a non-fatal
+#                "No test is available" notice; only IntegrationTests has cases
+#                so far. Testcontainers-backed integration tests land in T-210
+#                and will plug into this same `dotnet test` invocation — Docker
+#                is already available on ubuntu-latest runners.
+#   - sidecar  : install the package with the `[dev]` extra (pytest + grpc_tools
+#                + ruff) and run pytest. The proto codegen test invokes
+#                grpc_tools.protoc against backend/proto/ibkr.proto in a tmp dir,
+#                so no committed generated stubs are required.
+#   - frontend : `npm install` (package-lock.json is gitignored, see ci.yml) and
+#                `jest --ci` via `npm test -- --ci`.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — dotnet test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+
+      - name: Restore
+        run: dotnet restore CheapAnalysis.sln
+
+      - name: Test
+        run: dotnet test CheapAnalysis.sln --no-restore --verbosity normal
+
+  sidecar:
+    name: Sidecar — pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ibkr-sidecar
+    steps:
+      - uses: actions/checkout@v4
+
+      # pyproject.toml pins requires-python to >=3.11,<3.13. 3.12 is the latest
+      # supported and gives us future-proofing without breaking the constraint.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ibkr-sidecar/pyproject.toml
+
+      - name: Install package with dev extras
+        run: python -m pip install -e ".[dev]"
+
+      - name: Test
+        run: python -m pytest
+
+  frontend:
+    name: Frontend — jest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          # No `cache: npm`: package-lock.json is gitignored (see ci.yml).
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Test
+        run: npm test -- --ci
