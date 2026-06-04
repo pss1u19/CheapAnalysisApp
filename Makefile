@@ -26,7 +26,7 @@ MIGRATIONS_PROJECT := src/CheapAnalysis.Infrastructure
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup up down migrate seed test format generate-api \
+.PHONY: help setup up down migrate seed test format generate-api hooks-probe \
         proto proto-dotnet proto-python
 
 help: ## Show this list of targets
@@ -63,6 +63,29 @@ format: ## Format backend (dotnet format) and frontend (prettier) sources
 
 generate-api: ## Regenerate the TypeScript API client from the OpenAPI schema (NSwag)
 	cd $(FRONTEND_DIR) && npm run generate-api
+
+# Runs every check the .husky/pre-commit hook runs, but unscoped (always all
+# four gates) and without needing anything staged. Useful before authoring a
+# new gate ("does the tree pass the existing gates first?") and for debugging
+# why the hook is failing. Unlike the hook, this does NOT abort on the first
+# failure — every gate runs so you see the full picture in one go; the exit
+# code is non-zero if any of them failed.
+hooks-probe: ## Run pre-commit gates against the current tree (no commit needed)
+	@fail=0; \
+	echo "→ dotnet format --verify-no-changes (backend)"; \
+	(cd $(BACKEND_DIR) && dotnet format $(SOLUTION) --verify-no-changes --severity error) || fail=1; \
+	echo "→ ng lint (frontend)"; \
+	(cd $(FRONTEND_DIR) && npm run --silent lint) || fail=1; \
+	echo "→ prettier --check (frontend)"; \
+	(cd $(FRONTEND_DIR) && npm run --silent format:check) || fail=1; \
+	if command -v gitleaks >/dev/null 2>&1; then \
+		echo "→ gitleaks (history scan)"; \
+		gitleaks git --no-banner --redact || fail=1; \
+	else \
+		echo "→ gitleaks not on PATH — skipping (install: winget install Gitleaks.Gitleaks)"; \
+	fi; \
+	if [ $$fail -eq 0 ]; then echo "✓ hooks-probe clean"; else echo "✗ hooks-probe failed"; fi; \
+	exit $$fail
 
 # --- gRPC stubs (T-007) ------------------------------------------------------
 # `make proto` regenerates the gRPC stubs on BOTH sides of the IBKR contract

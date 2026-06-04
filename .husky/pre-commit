@@ -1,0 +1,62 @@
+#!/usr/bin/env sh
+# Pre-commit gate. Mirrors the CI lint job (.github/workflows/ci.yml) so the
+# same checks run locally before they fail in CI, and adds gitleaks for
+# staged secret scanning.
+#
+# Scoped by staged paths: backend checks run only when files under backend/
+# are staged; same for frontend/. gitleaks always runs on staged content.
+#
+# Bypass (rare, with a reason): git commit --no-verify
+set -eu
+
+# Nothing staged — let Git proceed (covers `git commit --amend --no-edit`
+# with an unchanged tree, etc.).
+if git diff --cached --quiet; then
+  exit 0
+fi
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+backend_changed=$(printf '%s\n' "$staged_files" | grep -E '^backend/' || true)
+frontend_changed=$(printf '%s\n' "$staged_files" | grep -E '^frontend/' || true)
+
+fail=0
+
+# --- gitleaks (always, staged only) ------------------------------------------
+# Uses the gitleaks 8.18+ form (`git --pre-commit --staged`); the older
+# `protect --staged` was removed in 8.27.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "✗ gitleaks not found on PATH."
+  echo "  Install: https://github.com/gitleaks/gitleaks#installing"
+  echo "  Windows: 'winget install Gitleaks.Gitleaks' or 'scoop install gitleaks'"
+  fail=1
+else
+  echo "→ gitleaks (staged)"
+  if ! gitleaks git --pre-commit --staged --no-banner --redact; then
+    fail=1
+  fi
+fi
+
+# --- backend: dotnet format --verify-no-changes ------------------------------
+if [ -n "$backend_changed" ]; then
+  echo "→ dotnet format --verify-no-changes (backend)"
+  if ! (cd backend && dotnet format CheapAnalysis.sln --verify-no-changes --severity error); then
+    echo "  Fix: (cd backend && dotnet format CheapAnalysis.sln)"
+    fail=1
+  fi
+fi
+
+# --- frontend: ng lint + prettier --check ------------------------------------
+if [ -n "$frontend_changed" ]; then
+  echo "→ ng lint (frontend)"
+  if ! (cd frontend && npm run --silent lint); then
+    echo "  Fix: (cd frontend && npm run lint:fix)"
+    fail=1
+  fi
+  echo "→ prettier --check (frontend)"
+  if ! (cd frontend && npm run --silent format:check); then
+    echo "  Fix: (cd frontend && npm run format)"
+    fail=1
+  fi
+fi
+
+exit $fail

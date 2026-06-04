@@ -1,0 +1,48 @@
+# Pin line endings repo-wide, overriding the local `core.autocrlf` setting.
+#
+# Without this file, Git for Windows defaults autocrlf=true and converts text
+# files to CRLF on checkout. `.editorconfig` says end_of_line=lf, but it only
+# steers editors — Git's own conversion step happens after the editor writes,
+# so the working tree drifts to CRLF. Tools that read the working tree
+# (`dotnet format`, `prettier --check`) then flag every line, while CI passes
+# on Linux (autocrlf=false by default). `.gitattributes` is the only mechanism
+# that pins line-ending behavior repo-wide regardless of who clones.
+
+# Default: auto-detect text, store and check out as LF.
+* text=auto eol=lf
+
+# Windows-only files keep CRLF.
+*.bat        text eol=crlf
+*.cmd        text eol=crlf
+*.ps1        text eol=crlf
+*.psm1       text eol=crlf
+
+# Shell scripts must stay LF or they don't execute.
+*.sh         text eol=lf
+
+# Makefiles use tabs — guard against editor "auto-fix" to spaces by treating
+# them as text but with a hard tab requirement enforced by .editorconfig.
+Makefile     text eol=lf
+
+# Explicit binary types so Git never tries to normalize them.
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.gif        binary
+*.ico        binary
+*.webp       binary
+*.pdf        binary
+*.xlsx       binary
+*.xls        binary
+*.docx       binary
+*.zip        binary
+*.gz         binary
+*.tar        binary
+*.dll        binary
+*.exe        binary
+*.pfx        binary
+
+# Generated client code: exclude from GitHub language stats and diff noise.
+frontend/src/app/api/**            linguist-generated=true
+backend/**/obj/**                  linguist-generated=true
+backend/**/bin/**                  linguist-generated=true
