@@ -47,6 +47,8 @@ services:
       # Env config overrides appsettings; double-underscore maps to the
       # ConnectionStrings:AppDb section. Host=postgres is the service name.
       ConnectionStrings__AppDb: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cheapanalysis};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      # Sentry error reporting (T-017). Empty default keeps the SDK a no-op.
+      SENTRY_DSN: ${SENTRY_DSN:-}
     ports:
       - "8080:8080"
     depends_on:
