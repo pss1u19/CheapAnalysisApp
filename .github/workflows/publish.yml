@@ -1,0 +1,83 @@
+# Build and push container images for the three runnable services
+# (backend, frontend, ibkr-sidecar) to GitHub Container Registry whenever a
+# commit lands on main. PRs do NOT push — they're already gated by ci.yml
+# (lint + build) and tests.yml (dotnet test, pytest, jest) on the same trigger.
+#
+# Tags applied to each image (via docker/metadata-action):
+#   - latest        — always tracks the tip of main
+#   - sha-<short>   — 7-char commit SHA, for unambiguous redeploys & rollback
+#
+# Auth uses the per-run GITHUB_TOKEN with `packages: write` — no extra secret
+# needed. GHCR scope is granted implicitly by the workflow-level permissions.
+#
+# Build cache is persisted via the GitHub Actions cache backend
+# (type=gha, scoped per matrix component) so subsequent runs reuse layers.
+# The matrix runs all three components in parallel with fail-fast off so a
+# failure in one image doesn't cancel publishes of the others.
+name: Publish images
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+# A newer push to main supersedes in-flight runs. Cancelling is safe here —
+# each run fully replaces the `latest` tag, so the most recent push wins anyway.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            context: ./backend
+          - component: frontend
+            context: ./frontend
+          - component: ibkr-sidecar
+            context: ./ibkr-sidecar
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR image names must be lowercase. ${{ github.repository }} preserves
+      # owner+repo casing (e.g. "pss1u19/CheapAnalysisApp"), so lowercase it
+      # once via bash parameter expansion and reuse via $GITHUB_ENV.
+      - name: Resolve image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.component }}" >> "$GITHUB_ENV"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short,prefix=sha-
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
