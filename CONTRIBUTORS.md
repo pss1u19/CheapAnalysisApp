@@ -38,6 +38,17 @@ dotnet run --project src/CheapAnalysis.Api
 
 Commits follow Conventional Commits, enforced via commitlint + Husky.
 
+### Pre-commit hooks
+`npm install` at the repo root installs Husky and wires `.husky/pre-commit`, which runs (scoped to what you staged):
+
+- `gitleaks git --pre-commit --staged` — staged secret scan. Install once: `winget install Gitleaks.Gitleaks` / `scoop install gitleaks` / `brew install gitleaks`. See [gitleaks install](https://github.com/gitleaks/gitleaks#installing).
+- `dotnet format --verify-no-changes` on `backend/` when files under `backend/` are staged.
+- `ng lint` + `prettier --check` on `frontend/` when files under `frontend/` are staged.
+
+Same checks as CI (`.github/workflows/ci.yml`), so a failure here is what would have failed in CI. Bypass with `git commit --no-verify` only when you have a reason (e.g. WIP commit on a private branch).
+
+To run every gate against the current tree without making a commit (e.g. before adding a new gate, or to debug a hook failure): `make hooks-probe`. Same four checks, unscoped, no fail-fast — every gate runs so you see the full picture in one go.
+
 ## Practical rules
 - Open an issue before large changes.
 - Keep pull requests focused and small.
