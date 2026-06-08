@@ -18,6 +18,10 @@ try
         .Enrich.WithProperty("Application", "CheapAnalysis.Api")
         .WriteTo.Console(new CompactJsonFormatter()));
 
+    // Sentry binds the "Sentry" config section and the SENTRY_DSN env var (T-017).
+    // With no DSN configured the SDK is a no-op, so the stack still runs without it.
+    builder.WebHost.UseSentry();
+
     builder.Services.AddApiServices(builder.Configuration);
 
     var application = builder.Build();
