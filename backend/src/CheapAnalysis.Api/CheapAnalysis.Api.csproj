@@ -20,4 +20,9 @@
     <ProjectReference Include="..\CheapAnalysis.Infrastructure\CheapAnalysis.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- T-018: integration tests seed idempotency state using ComputeFingerprint. -->
+    <InternalsVisibleTo Include="CheapAnalysis.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

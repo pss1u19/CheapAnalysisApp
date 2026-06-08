@@ -2,6 +2,8 @@ using CheapAnalysis.Infrastructure;
 using CheapAnalysis.Infrastructure.Persistence;
 using FastEndpoints;
 using FastEndpoints.Swagger;
+// Alias to disambiguate from FastEndpoints' own IdempotencyOptions type (T-018).
+using IdempotencyOptions = CheapAnalysis.Api.Middleware.IdempotencyOptions;
 
 namespace CheapAnalysis.Api.Configuration;
 
@@ -32,6 +34,16 @@ public static class DependencyInjection
         });
 
         services.AddInfrastructureServices(configuration);
+
+        // T-018: idempotency is only viable with a Redis store, so force it off when none
+        // is configured (the Infrastructure layer leaves IIdempotencyStore unregistered).
+        services.AddOptions<IdempotencyOptions>()
+            .Bind(configuration.GetSection(IdempotencyOptions.SectionName))
+            .PostConfigure(idempotencyOptions =>
+            {
+                var redisConfigured = !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Redis"));
+                idempotencyOptions.Enabled = idempotencyOptions.Enabled && redisConfigured;
+            });
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>(name: "db", tags: ["ready"]);
