@@ -35,6 +35,10 @@ public static class DependencyInjection
 
         services.AddInfrastructureServices(configuration);
 
+        // T-101: cookie auth scheme + antiforgery (CSRF) + SPA CORS. Sessions and the
+        // endpoints that issue them land in T-102.
+        services.AddSessionSecurity(configuration);
+
         // T-018: idempotency is only viable with a Redis store, so force it off when none
         // is configured (the Infrastructure layer leaves IIdempotencyStore unregistered).
         services.AddOptions<IdempotencyOptions>()
