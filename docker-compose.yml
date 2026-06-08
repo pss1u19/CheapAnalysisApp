@@ -47,12 +47,16 @@ services:
       # Env config overrides appsettings; double-underscore maps to the
       # ConnectionStrings:AppDb section. Host=postgres is the service name.
       ConnectionStrings__AppDb: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cheapanalysis};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      # Redis backs the Idempotency-Key middleware (T-018). Empty disables idempotency.
+      ConnectionStrings__Redis: "redis:6379"
       # Sentry error reporting (T-017). Empty default keeps the SDK a no-op.
       SENTRY_DSN: ${SENTRY_DSN:-}
     ports:
       - "8080:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1"]

@@ -1,8 +1,11 @@
+using CheapAnalysis.Application.Idempotency;
+using CheapAnalysis.Infrastructure.Idempotency;
 using CheapAnalysis.Infrastructure.Persistence;
 using CheapAnalysis.Infrastructure.Persistence.Interceptors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 
 namespace CheapAnalysis.Infrastructure;
 
@@ -30,6 +33,30 @@ public static class DependencyInjection
                 serviceProvider.GetRequiredService<CurrentUserConnectionInterceptor>());
         });
 
+        AddIdempotencyStore(services, configuration);
+
         return services;
+    }
+
+    /// <summary>
+    /// Wires the Redis-backed idempotency store (T-018) when a Redis connection string is
+    /// present. With none configured the store is left unregistered and the API treats
+    /// idempotency as disabled — mirroring how Sentry and the DB no-op without their env.
+    /// </summary>
+    private static void AddIdempotencyStore(IServiceCollection services, IConfiguration configuration)
+    {
+        var redisConnectionString = configuration.GetConnectionString("Redis");
+        if (string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            return;
+        }
+
+        var redisConfiguration = ConfigurationOptions.Parse(redisConnectionString);
+        // Connect lazily and don't throw at startup if Redis is down, so the host still
+        // boots; commands surface failures at request time where the middleware fails open.
+        redisConfiguration.AbortOnConnectFail = false;
+
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConfiguration));
+        services.AddSingleton<IIdempotencyStore, RedisIdempotencyStore>();
     }
 }

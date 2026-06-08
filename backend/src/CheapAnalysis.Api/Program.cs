@@ -1,4 +1,5 @@
 using CheapAnalysis.Api.Configuration;
+using CheapAnalysis.Api.Middleware;
 using FastEndpoints;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
@@ -29,6 +30,10 @@ try
     application.UseSerilogRequestLogging();
     application.UseExceptionHandler();
     application.UseStatusCodePages();
+
+    // T-018: replay/short-circuit mutating requests carrying an Idempotency-Key. Sits
+    // below the exception handler so a thrown endpoint releases the key (see middleware).
+    application.UseIdempotency();
 
     // ShortNames makes swagger operationIds the endpoint class name (PingEndpoint)
     // instead of the full namespace path, so generated client methods read cleanly.
