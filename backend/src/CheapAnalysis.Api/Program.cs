@@ -31,6 +31,10 @@ try
     application.UseExceptionHandler();
     application.UseStatusCodePages();
 
+    // T-101: CORS, cookie auth, authorization, and antiforgery. Runs before idempotency so
+    // the per-user key namespace sees the authenticated principal once T-102 issues sessions.
+    application.UseSessionSecurity();
+
     // T-018: replay/short-circuit mutating requests carrying an Idempotency-Key. Sits
     // below the exception handler so a thrown endpoint releases the key (see middleware).
     application.UseIdempotency();
