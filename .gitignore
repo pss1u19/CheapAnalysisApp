@@ -80,15 +80,23 @@ dist/
 # Parcel
 .parcel-cache/
 
-# npm / yarn / pnpm
+# npm / yarn / pnpm — debug logs and the local store are never committed
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .pnpm-store/
+
+# Lockfiles. The frontend standardizes on pnpm (ARCHITECTURE §5), and its
+# lockfile IS committed for reproducible installs — CI and Docker run
+# `pnpm install --frozen-lockfile` (the npm-ci equivalent) against it. npm and
+# yarn locks stay ignored: a stray one means the wrong package manager was used.
+# The root tooling workspace (commitlint/husky) still uses npm and is not
+# build-critical, so its lock remains ignored.
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+!/frontend/pnpm-lock.yaml
 
 # Jest
 coverage/

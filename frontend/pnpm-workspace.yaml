@@ -1,0 +1,17 @@
+# pnpm reads its settings from this file (pnpm 10+ no longer reads the "pnpm"
+# field in package.json). This is not a monorepo — there is no `packages:` key;
+# the file exists solely to hold the setting below.
+#
+# pnpm blocks dependency install (postinstall) scripts by default as a
+# supply-chain safeguard. allowBuilds is the per-package allowlist. These four
+# build native binaries the Angular toolchain needs, so they must run in CI and
+# Docker exactly as they do locally:
+#   - esbuild           the application/build-angular bundler
+#   - @parcel/watcher   dev-server file watching (ng serve)
+#   - lmdb              the Angular CLI persistent build cache (.angular/cache)
+#   - msgpackr-extract  native msgpack accel used alongside lmdb
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true

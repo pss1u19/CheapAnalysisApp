@@ -2,7 +2,7 @@ dist
 coverage
 .angular
 node_modules
-package-lock.json
+pnpm-lock.yaml
 
-# NSwag-generated API clients (T-010) — regenerate via `npm run generate-api`
+# NSwag-generated API clients (T-010) — regenerate via `pnpm run generate-api`
 src/app/api
