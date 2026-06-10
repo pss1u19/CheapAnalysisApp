@@ -2,12 +2,23 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.26.
 
+## Package manager
+
+This project uses [pnpm](https://pnpm.io) (ARCHITECTURE §5). The version is pinned by the `packageManager` field in `package.json`; [Corepack](https://nodejs.org/api/corepack.html) (bundled with Node) resolves it automatically:
+
+```bash
+corepack enable   # one-time — activates the pinned pnpm
+pnpm install      # install dependencies from the committed pnpm-lock.yaml
+```
+
+`pnpm-lock.yaml` is committed, so installs are reproducible: CI and Docker run `pnpm install --frozen-lockfile` to install the exact locked versions. Native build scripts are blocked by pnpm unless allowlisted in `pnpm-workspace.yaml` (`allowBuilds`).
+
 ## Development server
 
 To start a local development server, run:
 
 ```bash
-ng serve
+pnpm start
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
@@ -17,13 +28,13 @@ Once the server is running, open your browser and navigate to `http://localhost:
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
 
 ```bash
-ng generate component component-name
+pnpm exec ng generate component component-name
 ```
 
 For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
 
 ```bash
-ng generate --help
+pnpm exec ng generate --help
 ```
 
 ## Building
@@ -31,7 +42,7 @@ ng generate --help
 To build the project run:
 
 ```bash
-ng build
+pnpm build
 ```
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
@@ -47,10 +58,10 @@ This project is wired up with:
 ## Linting and formatting
 
 ```bash
-npm run lint          # ESLint (@angular-eslint flat config)
-npm run lint:fix      # ESLint with autofix
-npm run format        # Prettier --write
-npm run format:check  # Prettier --check
+pnpm run lint          # ESLint (@angular-eslint flat config)
+pnpm run lint:fix      # ESLint with autofix
+pnpm run format        # Prettier --write
+pnpm run format:check  # Prettier --check
 ```
 
 ## Running unit tests
@@ -58,9 +69,9 @@ npm run format:check  # Prettier --check
 Unit tests run on [Jest](https://jestjs.io) (via `jest-preset-angular`):
 
 ```bash
-npm test              # run once
-npm run test:watch    # watch mode
-npm run test:coverage # with coverage report
+pnpm test              # run once
+pnpm run test:watch    # watch mode
+pnpm run test:coverage # with coverage report
 ```
 
 ## Running end-to-end tests
@@ -68,7 +79,7 @@ npm run test:coverage # with coverage report
 For end-to-end (e2e) testing, run:
 
 ```bash
-ng e2e
+pnpm exec ng e2e
 ```
 
 Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.

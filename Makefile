@@ -37,7 +37,7 @@ help: ## Show this list of targets
 setup: ## Bootstrap the project: create .env, restore .NET + tools, install deps
 	@[ -f .env ] || (cp .env.example .env && echo "created .env from .env.example")
 	cd $(BACKEND_DIR) && dotnet tool restore && dotnet restore $(SOLUTION)
-	cd $(FRONTEND_DIR) && npm install
+	cd $(FRONTEND_DIR) && pnpm install
 	python -m pip install -e "$(SIDECAR_DIR)[dev]"
 
 up: ## Start the local dev stack in the background (docker compose up -d)
@@ -55,14 +55,14 @@ seed: ## Insert demo/seed data (no seed data exists yet — see T-301)
 
 test: ## Run backend (dotnet) and frontend (jest) test suites
 	cd $(BACKEND_DIR) && dotnet test $(SOLUTION)
-	cd $(FRONTEND_DIR) && npm test
+	cd $(FRONTEND_DIR) && pnpm test
 
 format: ## Format backend (dotnet format) and frontend (prettier) sources
 	cd $(BACKEND_DIR) && dotnet format $(SOLUTION)
-	cd $(FRONTEND_DIR) && npm run format
+	cd $(FRONTEND_DIR) && pnpm run format
 
 generate-api: ## Regenerate the TypeScript API client from the OpenAPI schema (NSwag)
-	cd $(FRONTEND_DIR) && npm run generate-api
+	cd $(FRONTEND_DIR) && pnpm run generate-api
 
 # Runs every check the .husky/pre-commit hook runs, but unscoped (always all
 # four gates) and without needing anything staged. Useful before authoring a
@@ -75,9 +75,9 @@ hooks-probe: ## Run pre-commit gates against the current tree (no commit needed)
 	echo "→ dotnet format --verify-no-changes (backend)"; \
 	(cd $(BACKEND_DIR) && dotnet format $(SOLUTION) --verify-no-changes --severity error) || fail=1; \
 	echo "→ ng lint (frontend)"; \
-	(cd $(FRONTEND_DIR) && npm run --silent lint) || fail=1; \
+	(cd $(FRONTEND_DIR) && pnpm run --silent lint) || fail=1; \
 	echo "→ prettier --check (frontend)"; \
-	(cd $(FRONTEND_DIR) && npm run --silent format:check) || fail=1; \
+	(cd $(FRONTEND_DIR) && pnpm run --silent format:check) || fail=1; \
 	if command -v gitleaks >/dev/null 2>&1; then \
 		echo "→ gitleaks (history scan)"; \
 		gitleaks git --no-banner --redact || fail=1; \

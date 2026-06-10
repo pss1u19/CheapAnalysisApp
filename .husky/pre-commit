@@ -48,13 +48,13 @@ fi
 # --- frontend: ng lint + prettier --check ------------------------------------
 if [ -n "$frontend_changed" ]; then
   echo "→ ng lint (frontend)"
-  if ! (cd frontend && npm run --silent lint); then
-    echo "  Fix: (cd frontend && npm run lint:fix)"
+  if ! (cd frontend && pnpm run --silent lint); then
+    echo "  Fix: (cd frontend && pnpm run lint:fix)"
     fail=1
   fi
   echo "→ prettier --check (frontend)"
-  if ! (cd frontend && npm run --silent format:check); then
-    echo "  Fix: (cd frontend && npm run format)"
+  if ! (cd frontend && pnpm run --silent format:check); then
+    echo "  Fix: (cd frontend && pnpm run format)"
     fail=1
   fi
 fi

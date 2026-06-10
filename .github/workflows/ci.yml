@@ -69,22 +69,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm is the frontend package manager (ARCHITECTURE §5). action-setup reads
+      # the pinned version from frontend/package.json's "packageManager" field, so
+      # the version lives in one place. It must run before setup-node so the pnpm
+      # binary is on PATH when setup-node primes the pnpm store cache.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # No `cache: npm`: package-lock.json is gitignored in this repo, and
-          # setup-node's npm cache (and `npm ci`) both require a committed lock
-          # file. Install with `npm install` until a lock file is tracked.
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
+      # --frozen-lockfile is the npm-ci equivalent: installs the exact versions in
+      # the committed pnpm-lock.yaml and fails if it is out of sync with
+      # package.json, rather than silently updating it.
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Lint (ng lint)
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Format check (prettier --check)
-        run: npm run format:check
+        run: pnpm run format:check
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
