@@ -28,7 +28,7 @@ jobs:
     name: Signing sentence is consistent
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Verify the CLA signing sentence matches everywhere
         run: |
           set -euo pipefail
