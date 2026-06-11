@@ -78,7 +78,7 @@ jobs:
       # Pin the SDK to backend/global.json; the path resolves from the workspace
       # root, not the job working-directory (see ci.yml).
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: backend/global.json
 
