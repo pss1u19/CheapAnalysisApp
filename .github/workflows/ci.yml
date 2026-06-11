@@ -74,7 +74,7 @@ jobs:
       # the version lives in one place. It must run before setup-node so the pnpm
       # binary is on PATH when setup-node primes the pnpm store cache.
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           package_json_file: frontend/package.json
 
