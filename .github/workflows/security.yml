@@ -1,0 +1,136 @@
+# Security gates: secret scanning + dependency vulnerability scanning.
+#
+# Runs on every PR and on push to main (same triggers as ci.yml / tests.yml) so
+# secrets and known-vulnerable dependencies are caught server-side, not only by
+# the local pre-commit hook (.husky/pre-commit). The hook is bypassable and
+# partial: `git commit --no-verify` skips it, unhooked clones never install it,
+# GitHub web edits never run it, and it only ever sees *staged* content — never
+# history. These jobs close that gap.
+#
+# Three independent jobs run in parallel (mirroring the ci.yml / tests.yml split)
+# so one failure doesn't mask the others:
+#   - secret-scan   : gitleaks over the FULL git history (the hook sees one staged
+#                     diff; this sees every reachable commit).
+#   - backend-deps  : `dotnet list package --vulnerable` gate.
+#   - frontend-deps : `pnpm audit` gate, scoped to production dependencies.
+#
+# Container-image scanning (Trivy) lives in publish.yml, where the images are
+# built. Dependabot (.github/dependabot.yml) opens version-bump PRs across all
+# four ecosystems and complements these blocking gates.
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same ref supersedes in-flight runs (see ci.yml for the
+# head_ref || run_id rationale).
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Secrets — gitleaks (full history)
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 fetches the COMPLETE history. The default shallow clone
+      # (depth 1) would reduce `gitleaks git` to a single commit and defeat the
+      # point of a history scan — a secret committed and later removed would slip
+      # through.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Install the gitleaks binary and run the same `gitleaks git` invocation as
+      # `make hooks-probe` and the pre-commit hook, so local and CI scans behave
+      # identically. Pinned to the version developers install locally; a raw
+      # release download can't be tracked by Dependabot, so bump this string by
+      # hand when the local toolchain moves.
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          chmod +x /usr/local/bin/gitleaks
+          gitleaks version
+
+      # `gitleaks git` scans all reachable commits. --redact keeps any matched
+      # secret out of the logs; --no-banner trims noise. Non-zero exit on a leak
+      # fails the job.
+      - name: Scan full history
+        run: gitleaks git --no-banner --redact
+
+  backend-deps:
+    name: Backend — vulnerable NuGet packages
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pin the SDK to backend/global.json; the path resolves from the workspace
+      # root, not the job working-directory (see ci.yml).
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+
+      - name: Restore
+        run: dotnet restore CheapAnalysis.sln
+
+      # `dotnet list package --vulnerable` ALWAYS exits 0 — even when it finds
+      # vulnerabilities — so the exit code can't gate. Capture the report, print
+      # it, and fail on the marker line dotnet emits per offending project.
+      # --include-transitive covers indirect dependencies too; if an unfixable
+      # transitive advisory ever blocks here, the escape hatch is a direct
+      # PackageReference pinning the patched version.
+      - name: Check for vulnerable packages
+        run: |
+          report=$(dotnet list CheapAnalysis.sln package --vulnerable --include-transitive)
+          echo "$report"
+          if echo "$report" | grep -q "has the following vulnerable packages"; then
+            echo "::error::Vulnerable NuGet packages detected — see the report above."
+            exit 1
+          fi
+          echo "No vulnerable NuGet packages."
+
+  frontend-deps:
+    name: Frontend — pnpm audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      # See ci.yml for why pnpm/action-setup must run before setup-node.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # pnpm 11 requires Node >= 22.13; also matches the node:22 frontend image.
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # --prod scopes the gate to production (runtime) dependencies — the code
+      # that actually ships to users. The devDependency tree (Angular's build
+      # toolchain) currently carries transitive high-severity advisories — e.g.
+      # tar and serialize-javascript pulled in under @angular/cli and
+      # @angular-devkit/build-angular — with no direct fix available; gating on
+      # those would paint CI red on issues that never reach the deployed app.
+      # Dependabot owns bumping the dev toolchain as upstream fixes land. pnpm
+      # audit reads the committed lockfile, so no install step is required.
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high

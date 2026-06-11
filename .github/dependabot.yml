@@ -1,0 +1,67 @@
+# Dependabot keeps dependencies patched across every package ecosystem in the
+# repo. It complements the CI vulnerability gates (security.yml + the Trivy
+# image scan in publish.yml): the gates *block* known-vulnerable code from
+# merging or publishing, while Dependabot *proactively* opens version-bump PRs
+# before — and after — advisories land. In particular it owns the dev-only
+# Angular build-toolchain advisories that `pnpm audit --prod` deliberately
+# leaves out of the blocking gate (security.yml explains why).
+#
+# Ecosystems map to the three services plus the workflow files:
+#   nuget          -> backend/        (CheapAnalysis.sln + csproj graph)
+#   npm            -> frontend/       (pnpm-lock.yaml; the "npm" ecosystem covers pnpm)
+#   pip            -> ibkr-sidecar/   (pyproject.toml, PEP 621 dependencies)
+#   github-actions -> .github/workflows/ (action version pins, incl. trivy-action)
+#
+# Minor + patch bumps are grouped into one weekly PR per ecosystem to keep review
+# noise low for a solo maintainer; major bumps stay ungrouped since they tend to
+# carry breaking changes that warrant individual attention.
+#
+# Commit messages follow Conventional Commits (commitlint.config.cjs): the `build`
+# type for package dependencies and `ci` for the workflow action pins, with
+# `include: scope` adding the recognised `deps` / `deps-dev` scope.
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /backend
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: pip
+    directory: /ibkr-sidecar
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      sidecar-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]

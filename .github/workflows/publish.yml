@@ -1,7 +1,8 @@
 # Build and push container images for the three runnable services
 # (backend, frontend, ibkr-sidecar) to GitHub Container Registry whenever a
 # commit lands on main. PRs do NOT push — they're already gated by ci.yml
-# (lint + build) and tests.yml (dotnet test, pytest, jest) on the same trigger.
+# (lint + build), tests.yml (dotnet test, pytest, jest), and security.yml
+# (gitleaks + dependency audits) on the same trigger.
 #
 # Tags applied to each image (via docker/metadata-action):
 #   - latest        — always tracks the tip of main
@@ -14,6 +15,10 @@
 # (type=gha, scoped per matrix component) so subsequent runs reuse layers.
 # The matrix runs all three components in parallel with fail-fast off so a
 # failure in one image doesn't cancel publishes of the others.
+#
+# Each image is built into the local Docker daemon, scanned by Trivy, and only
+# then pushed — a failing scan blocks publication of that component (the others
+# still publish). See the scan step for why the gate is scoped to CRITICAL.
 name: Publish images
 
 on:
@@ -72,12 +77,39 @@ jobs:
             type=raw,value=latest
             type=sha,format=short,prefix=sha-
 
-      - name: Build and push
+      # Build into the local Docker daemon (load, no push yet) so Trivy scans the
+      # exact artifact that will be published. The build cache is still written to
+      # the Actions backend for the next run. load:true is single-platform, which
+      # matches this workflow — no multi-arch build is configured.
+      - name: Build image
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
-          push: true
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+
+      # Vulnerability-gate the built image before it reaches GHCR. Scoped to
+      # CRITICAL with ignore-unfixed: the highest-severity, actually-patchable
+      # issues block the publish, while unfixable base-image CVEs (no upstream
+      # patch yet) don't wedge the pipeline. HIGH/below and language-level
+      # coverage is layered in security.yml (dotnet list --vulnerable, pnpm audit
+      # --prod) plus Dependabot. Worth tightening to CRITICAL,HIGH once the
+      # frontend ships a prod (nginx) image and its build toolchain — which
+      # carries known fixable HIGH advisories (see security.yml) — leaves the
+      # published layer.
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE }}:latest
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL
+
+      # Trivy passed — push every tag (latest + sha-<short>) of the scanned image.
+      - name: Push image
+        run: docker image push --all-tags ${{ env.IMAGE }}
