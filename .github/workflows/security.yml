@@ -42,7 +42,7 @@ jobs:
       # (depth 1) would reduce `gitleaks git` to a single commit and defeat the
       # point of a history scan — a secret committed and later removed would slip
       # through.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -73,7 +73,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Pin the SDK to backend/global.json; the path resolves from the workspace
       # root, not the job working-directory (see ci.yml).
@@ -108,7 +108,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # See ci.yml for why pnpm/action-setup must run before setup-node.
       - name: Set up pnpm
