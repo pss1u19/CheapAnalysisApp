@@ -20,7 +20,7 @@ public sealed class SentryTestEndpoint(IWebHostEnvironment environment) : Endpoi
     {
         if (!environment.IsDevelopment())
         {
-            await SendNotFoundAsync(ct);
+            await Send.NotFoundAsync(ct);
             return;
         }
 
