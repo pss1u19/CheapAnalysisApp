@@ -3,18 +3,21 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+// Aliased to avoid clashing with Microsoft.AspNetCore.Http.SameSiteMode used by the options below.
+using SetCookieHeaderValue = Microsoft.Net.Http.Headers.SetCookieHeaderValue;
 
 namespace CheapAnalysis.IntegrationTests.Configuration;
 
 /// <summary>
 /// Verifies the T-101 security wiring registers cookie auth, antiforgery, and CORS with the
-/// strict options ARCHITECTURE.md §12.2 specifies. Asserting the resolved options is the
-/// mechanism check: the contract is the configuration itself, since no endpoints consume it
-/// until T-102.
+/// strict options ARCHITECTURE.md §12.2 specifies, and that the CSRF double-submit pair actually
+/// round-trips (T-112): the request token issued into the script-readable XSRF-TOKEN cookie
+/// validates when echoed back in the header, while a missing or stale token is rejected.
 /// </summary>
 public sealed class SessionSecurityTests
 {
@@ -61,17 +64,82 @@ public sealed class SessionSecurityTests
     }
 
     [Fact]
-    public void Antiforgery_uses_the_double_submit_header_and_a_script_readable_cookie()
+    public void Antiforgery_reads_the_double_submit_header_and_keeps_its_framework_cookie_httponly()
     {
         using var provider = BuildProvider();
 
         var antiforgeryOptions = provider.GetRequiredService<IOptions<AntiforgeryOptions>>().Value;
 
         antiforgeryOptions.HeaderName.Should().Be("X-XSRF-TOKEN");
-        antiforgeryOptions.Cookie.Name.Should().Be("XSRF-TOKEN");
-        antiforgeryOptions.Cookie.HttpOnly.Should().BeFalse();
+        // The framework cookie holds the cookie token and must stay HttpOnly under its default
+        // name. T-101 renamed it to XSRF-TOKEN and exposed it to script (arch review F1); echoing
+        // a cookie token as the request-token header fails validation. Guard against regressing.
+        antiforgeryOptions.Cookie.HttpOnly.Should().BeTrue();
+        antiforgeryOptions.Cookie.Name.Should().NotBe(Security.CsrfCookieName);
         antiforgeryOptions.Cookie.SecurePolicy.Should().Be(CookieSecurePolicy.Always);
         antiforgeryOptions.Cookie.SameSite.Should().Be(SameSiteMode.Strict);
+    }
+
+    [Fact]
+    public void Issued_cookies_keep_the_framework_token_httponly_and_the_request_token_readable()
+    {
+        using var provider = BuildProvider();
+
+        var issued = IssueSession(provider);
+
+        var cookies = ReadSetCookies(issued);
+        var frameworkCookie = cookies.Single(cookie =>
+            cookie.Name.StartsWith(".AspNetCore.Antiforgery", StringComparison.Ordinal));
+        var requestTokenCookie = cookies.Single(cookie => cookie.Name == Security.CsrfCookieName);
+
+        frameworkCookie.HttpOnly.Should().BeTrue("the cookie token must never be exposed to script");
+        requestTokenCookie.HttpOnly.Should().BeFalse("the SPA must read the request token to echo it");
+        requestTokenCookie.Secure.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Issued_request_token_round_trips_from_cookie_to_header()
+    {
+        using var provider = BuildProvider();
+        var antiforgery = provider.GetRequiredService<IAntiforgery>();
+
+        // Session issuance stores the framework cookie token and emits the readable request token;
+        // a subsequent unsafe request echoes the cookies and the decoded XSRF-TOKEN value as the
+        // header. This is the path T-102's endpoints will exercise.
+        var issued = IssueSession(provider);
+        var validateContext = BuildEchoingRequest(issued, ReadEchoedRequestToken(issued));
+
+        (await antiforgery.IsRequestValidAsync(validateContext)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Request_without_the_token_header_is_rejected()
+    {
+        using var provider = BuildProvider();
+        var antiforgery = provider.GetRequiredService<IAntiforgery>();
+
+        // Cookies echoed, but no X-XSRF-TOKEN header — UseAntiforgeryFE surfaces this as a 400.
+        var validateContext = BuildEchoingRequest(IssueSession(provider), headerToken: null);
+
+        await antiforgery.Invoking(service => service.ValidateRequestAsync(validateContext))
+            .Should().ThrowAsync<AntiforgeryValidationException>();
+    }
+
+    [Fact]
+    public async Task Request_with_a_stale_token_header_is_rejected()
+    {
+        using var provider = BuildProvider();
+        var antiforgery = provider.GetRequiredService<IAntiforgery>();
+
+        var issued = IssueSession(provider);
+        // A second, independent issuance yields a request token that does not match this session's
+        // cookie token — the mismatched pair models a stale token the SPA might replay.
+        var staleToken = ReadEchoedRequestToken(IssueSession(provider));
+
+        var validateContext = BuildEchoingRequest(issued, staleToken);
+
+        await antiforgery.Invoking(service => service.ValidateRequestAsync(validateContext))
+            .Should().ThrowAsync<AntiforgeryValidationException>();
     }
 
     [Fact]
@@ -113,8 +181,52 @@ public sealed class SessionSecurityTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSessionSecurity(configuration);
+        // Antiforgery protects its tokens with data protection; an ephemeral provider keeps the
+        // round-trip self-contained (no key ring on disk) while issue and validate share one key.
+        services.AddDataProtection().UseEphemeralDataProtectionProvider();
         return services.BuildServiceProvider();
     }
+
+    // Runs the session-issuance step over HTTPS (SecurePolicy.Always rejects plain HTTP, as it
+    // should) and returns the response carrying the framework cookie token + readable XSRF-TOKEN.
+    private static HttpResponse IssueSession(IServiceProvider provider)
+    {
+        var context = new DefaultHttpContext { RequestServices = provider, Request = { IsHttps = true } };
+        context.IssueCsrfCookie(provider.GetRequiredService<IAntiforgery>());
+        return context.Response;
+    }
+
+    // Replays a freshly issued response back as the next request, the way a browser would: the
+    // Set-Cookie values become the Cookie header, and the SPA's decoded request token (if any)
+    // becomes the X-XSRF-TOKEN header.
+    private static DefaultHttpContext BuildEchoingRequest(HttpResponse issued, string? headerToken)
+    {
+        var context = new DefaultHttpContext
+        {
+            RequestServices = issued.HttpContext.RequestServices,
+            Request = { IsHttps = true, Method = HttpMethods.Post },
+        };
+        context.Request.Headers.Cookie = string.Join(
+            "; ",
+            ReadSetCookies(issued).Select(cookie => $"{cookie.Name}={cookie.Value}"));
+        if (headerToken is not null)
+        {
+            context.Request.Headers[Security.CsrfHeaderName] = headerToken;
+        }
+
+        return context;
+    }
+
+    // The SPA reads XSRF-TOKEN via document.cookie, which URL-decodes the value (Angular's
+    // parseCookieValue → decodeURIComponent), then echoes that raw token in the header.
+    private static string ReadEchoedRequestToken(HttpResponse issued)
+    {
+        var requestTokenCookie = ReadSetCookies(issued).Single(cookie => cookie.Name == Security.CsrfCookieName);
+        return Uri.UnescapeDataString(requestTokenCookie.Value.ToString());
+    }
+
+    private static IList<SetCookieHeaderValue> ReadSetCookies(HttpResponse response)
+        => SetCookieHeaderValue.ParseList(response.Headers.SetCookie.Select(value => value!).ToList());
 
     private static async Task<int> CaptureStatusAfter(
         Func<RedirectContext<CookieAuthenticationOptions>, Task> handler,

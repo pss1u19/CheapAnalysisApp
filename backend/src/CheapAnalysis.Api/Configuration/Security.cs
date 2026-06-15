@@ -1,5 +1,6 @@
 using CheapAnalysis.Api.Middleware;
 using FastEndpoints;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
@@ -7,9 +8,9 @@ namespace CheapAnalysis.Api.Configuration;
 
 /// <summary>
 /// Session-cookie authentication, CSRF double-submit, and the development CORS policy (T-101).
-/// This wires the machinery only — the magic-link endpoints that actually issue a session and
-/// emit the <c>XSRF-TOKEN</c> cookie arrive in T-102, as does any endpoint opting into
-/// antiforgery validation. See ARCHITECTURE.md §12.
+/// Registration wires the machinery; <see cref="IssueCsrfCookie"/> emits the script-readable
+/// <c>XSRF-TOKEN</c> request-token cookie that the magic-link endpoints call at session issuance
+/// in T-102 — the first endpoints to opt into antiforgery validation. See ARCHITECTURE.md §12.
 /// </summary>
 public static class Security
 {
@@ -71,10 +72,15 @@ public static class Security
         services.AddAntiforgery(antiforgeryOptions =>
         {
             antiforgeryOptions.HeaderName = CsrfHeaderName;
-            antiforgeryOptions.Cookie.Name = CsrfCookieName;
-            // Script-readable on purpose: the SPA copies it into the request header. The
-            // separate, HttpOnly cookie token is what makes the double-submit unforgeable.
-            antiforgeryOptions.Cookie.HttpOnly = false;
+            // Leave the framework's own antiforgery cookie at its default name and HttpOnly: it
+            // carries the *cookie token*, which the browser must never expose to script. The
+            // matching *request token* the SPA actually echoes rides a separate, script-readable
+            // XSRF-TOKEN cookie that IssueCsrfCookie writes at session issuance.
+            //
+            // T-101 instead renamed this cookie to XSRF-TOKEN and dropped HttpOnly, so the SPA
+            // read the cookie token and echoed it as X-XSRF-TOKEN — ValidateRequestAsync then
+            // rejected every unsafe request (cookie token where a request token is required).
+            // Arch review F1, fixed in T-112. Transport hardening still applies to this cookie:
             antiforgeryOptions.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             antiforgeryOptions.Cookie.SameSite = SameSiteMode.Strict;
         });
@@ -120,6 +126,35 @@ public static class Security
         // via EnableAntiforgery(); a no-op for endpoints that don't. T-102 is the first opt-in.
         application.UseAntiforgeryFE();
         return application;
+    }
+
+    /// <summary>
+    /// Emits the CSRF double-submit pair at session issuance. ASP.NET's antiforgery service stores
+    /// the HttpOnly cookie token in its framework cookie; the matching request token is written
+    /// here into the script-readable <see cref="CsrfCookieName"/> cookie. The SPA reads that cookie
+    /// and echoes the value back in <see cref="CsrfHeaderName"/> on unsafe requests, where
+    /// <c>UseAntiforgeryFE</c> validates the pair. T-102 calls this from the magic-link callback
+    /// once the session cookie is set; mirrors the response described in ARCHITECTURE.md §12.1.
+    /// </summary>
+    public static void IssueCsrfCookie(this HttpContext httpContext, IAntiforgery antiforgery)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(antiforgery);
+
+        var tokens = antiforgery.GetAndStoreTokens(httpContext);
+        var requestToken = tokens.RequestToken
+            ?? throw new InvalidOperationException(
+                "Antiforgery produced no request token to issue into the XSRF-TOKEN cookie.");
+        httpContext.Response.Cookies.Append(CsrfCookieName, requestToken, new CookieOptions
+        {
+            // Script-readable on purpose: the SPA copies this into the request header. The
+            // separate, HttpOnly cookie token is what makes the double-submit unforgeable.
+            HttpOnly = false,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Path = "/",
+            IsEssential = true,
+        });
     }
 
     private static Func<RedirectContext<CookieAuthenticationOptions>, Task> SetStatusCode(int statusCode)
