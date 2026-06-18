@@ -13,7 +13,7 @@ public sealed class PingEndpoint : EndpointWithoutRequest<PingResponse>
 
     // Parameter name must match the base (FastEndpoints declares `ct`) — CA1725.
     public override Task HandleAsync(CancellationToken ct)
-        => SendAsync(new PingResponse("pong"), cancellation: ct);
+        => Send.OkAsync(new PingResponse("pong"), cancellation: ct);
 }
 
 public sealed record PingResponse(string Message);
