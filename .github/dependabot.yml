@@ -41,6 +41,18 @@ updates:
       prefix: build
       include: scope
     groups:
+      # The Angular framework + CLI move in lockstep: @angular/core, @angular/common,
+      # @angular/compiler-cli, the devkit and schematics all share an exact peer
+      # version, so a single-package major (e.g. core 19 → 22 while common stays 19)
+      # cannot even build. Group the whole family — majors included — into ONE
+      # coordinated PR. This intentionally overrides the "majors stay ungrouped"
+      # default above for the one family where ungrouping backfires.
+      angular:
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@schematics/angular"
+          - "@angular-eslint/*"
       frontend-minor-patch:
         update-types: [minor, patch]
 
