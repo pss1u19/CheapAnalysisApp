@@ -50,7 +50,7 @@ jobs:
           - component: ibkr-sidecar
             context: ./ibkr-sidecar
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # GHCR image names must be lowercase. ${{ github.repository }} preserves
       # owner+repo casing (e.g. "pss1u19/CheapAnalysisApp"), so lowercase it
