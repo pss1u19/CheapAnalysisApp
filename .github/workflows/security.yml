@@ -121,8 +121,11 @@ jobs:
         with:
           # pnpm 11 requires Node >= 22.13; also matches the node:22 frontend image.
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          # No `cache: pnpm` here: this job never runs `pnpm install`, so
+          # actions/setup-node's post-step would try to save a non-existent
+          # pnpm store and fail the whole job whenever the lockfile hash
+          # changes — i.e. on every dependency PR. `pnpm audit` reads the
+          # committed lockfile directly, so a warm store buys nothing anyway.
 
       # --prod scopes the gate to production (runtime) dependencies — the code
       # that actually ships to users. The devDependency tree (Angular's build
