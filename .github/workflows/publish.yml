@@ -82,7 +82,7 @@ jobs:
       # the Actions backend for the next run. load:true is single-platform, which
       # matches this workflow — no multi-arch build is configured.
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           load: true
