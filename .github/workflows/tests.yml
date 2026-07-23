@@ -64,7 +64,7 @@ jobs:
       # pyproject.toml pins requires-python to >=3.11,<3.13. 3.12 is the latest
       # supported and gives us future-proofing without breaking the constraint.
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: pip
